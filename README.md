@@ -59,6 +59,7 @@ RefChecker verifies citations against **Semantic Scholar**, **OpenAlex**, **Cros
   - [Multi-User Server (OAuth)](#multi-user-server-oauth)
   - [Deploy to Render](#deploy-to-render)
 - [Configuration](#configuration)
+- [GROBID (PDF Fallback Extraction)](#grobid-pdf-fallback-extraction)
 - [Local Database](#local-database)
 - [Testing](#testing)
 - [License](#license)
@@ -668,6 +669,38 @@ export ANTHROPIC_API_KEY=your_key           # Also: OPENAI_API_KEY, GOOGLE_API_K
 # Performance
 export SEMANTIC_SCHOLAR_API_KEY=your_key    # Higher rate limits / faster verification
 ```
+
+---
+
+## GROBID (PDF Fallback Extraction)
+
+GROBID is a PDF reference extraction service used as a fallback when no LLM provider is configured. RefChecker can auto-start GROBID via Docker, or you can run it manually.
+
+### Standalone GROBID
+
+```bash
+docker run -d --name refchecker-grobid -p 8070:8070 lfoppiano/grobid:0.8.2
+```
+
+### With Docker Compose
+
+GROBID is included in `docker-compose.yml` and starts automatically:
+
+```bash
+docker compose up -d
+```
+
+RefChecker connects to GROBID at `http://grobid:8070` inside the Docker network.
+
+### Custom GROBID Endpoint
+
+```bash
+docker run -p 8000:8000 -e GROBID_URL=http://your-grobid-server:8070 ghcr.io/markrussinovich/refchecker:latest
+```
+
+### Auto-start Behavior
+
+When no LLM is configured and Docker is available, RefChecker automatically starts the GROBID container when processing PDFs.
 
 ---
 
