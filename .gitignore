@@ -176,3 +176,5 @@ output/
 *.db-shm
 *.db-wal
 test_failure.txt
+
+.opencode
