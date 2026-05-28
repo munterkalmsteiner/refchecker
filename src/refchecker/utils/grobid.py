@@ -68,10 +68,12 @@ def ensure_grobid_running() -> bool:
 
     logger.info("Starting GROBID Docker container (%s)...", GROBID_DOCKER_IMAGE)
     try:
+        # Remove any existing container first
         subprocess.run(
             docker_cmd + ["rm", "-f", GROBID_CONTAINER_NAME],
             capture_output=True, timeout=10
         )
+        # Use --rm to auto-cleanup on exit, but we can still get logs during the startup check
         result = subprocess.run(
             docker_cmd + ["run", "-d", "--name", GROBID_CONTAINER_NAME,
              "-p", "8070:8070", "--rm", GROBID_DOCKER_IMAGE],
@@ -80,13 +82,39 @@ def ensure_grobid_running() -> bool:
         if result.returncode != 0:
             logger.warning("Failed to start GROBID container: %s", result.stderr.strip())
             return False
+        
+        # Give container a moment to start
+        import time
+        time.sleep(2)
 
         import time
         for i in range(90):
+            # Check if container is still running
+            check_result = subprocess.run(
+                docker_cmd + ["ps", "-q", "-f", f"name={GROBID_CONTAINER_NAME}"],
+                capture_output=True, text=True, timeout=5
+            )
+            if not check_result.stdout.strip():
+                # Container has exited - try to get logs before it's removed
+                logger.warning("GROBID container is not running. Attempting to retrieve logs...")
+                logs_result = subprocess.run(
+                    docker_cmd + ["logs", GROBID_CONTAINER_NAME],
+                    capture_output=True, text=True, timeout=5
+                )
+                if logs_result.returncode == 0 and (logs_result.stdout or logs_result.stderr):
+                    log_output = logs_result.stdout or logs_result.stderr
+                    logger.warning(
+                        "GROBID container exited. Last 30 lines of logs:\n%s",
+                        '\n'.join(log_output.split('\n')[-30:])
+                    )
+                else:
+                    logger.warning("GROBID container exited and logs are not available (container may have been auto-removed)")
+                return False
+            
             try:
                 resp = _requests.get(f"{GROBID_URL}/api/isalive", timeout=3)
                 if resp.status_code == 200:
-                    logger.info("GROBID ready", i)
+                    logger.info(f"GROBID ready after {i+1} seconds")
                     return True
             except Exception:
                 pass
