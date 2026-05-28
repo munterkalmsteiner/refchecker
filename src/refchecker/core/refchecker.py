@@ -6863,11 +6863,25 @@ class ArxivReferenceChecker:
             except Exception as e:
                 logger.warning(f"Could not save debug bibliography file for {paper_id}: {e}")
         
-        # Parse references
-        references = self.parse_references(bibliography_text)
-        if not self.last_bibliography_extraction_method:
-            self.last_bibliography_extraction_method = 'pdf'
-
+        # If no LLM is available, try GROBID first for better quality extraction
+        # GROBID produces structured data (authors, title, venue, year) which is
+        # far superior to regex-based text parsing
+        references = []
+        if not self.llm_extractor:
+            logger.info("No LLM configured, attempting GROBID extraction before text parsing fallback")
+            grobid_references = _maybe_use_grobid_fallback(None)
+            if grobid_references:
+                references = grobid_references
+                logger.info(f"Using GROBID extraction ({len(references)} references)")
+        
+        # If GROBID didn't work or LLM is available, parse the bibliography text
+        if not references:
+            references = self.parse_references(bibliography_text)
+            if not self.last_bibliography_extraction_method:
+                self.last_bibliography_extraction_method = 'pdf'
+        
+        # Final fallback: if we still have no references and no LLM, try GROBID one more time
+        # with an error message (this handles the case where text parsing also failed)
         if not references and not self.llm_extractor:
             grobid_references = _maybe_use_grobid_fallback(
                 "No LLM or GROBID available for PDF reference extraction. "
