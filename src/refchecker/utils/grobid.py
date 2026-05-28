@@ -23,7 +23,7 @@ DEFAULT_GROBID_FALLBACK_ERROR = (
 )
 
 GROBID_URL = os.environ.get("GROBID_URL", "http://localhost:8070")
-GROBID_DOCKER_IMAGE = "lfoppiano/grobid:0.8.2"
+GROBID_DOCKER_IMAGE = os.environ.get("GROBID_DOCKER_IMAGE", "grobid/grobid:0.8.2-full")
 GROBID_CONTAINER_NAME = "refchecker-grobid"
 
 _grobid_auto_started = False
