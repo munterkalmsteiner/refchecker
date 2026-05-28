@@ -165,15 +165,17 @@ def extract_refs_via_grobid(pdf_path: str) -> List[Dict[str, Any]]:
             "authors": [], "title": "", "venue": "", "year": None,
             "url": "", "doi": None, "type": "other",
         }
-        for pers in bib.iter(f'{ns}persName'):
-            forenames = [fn.text for fn in pers.iter(f'{ns}forename') if fn.text]
-            surname = ""
-            for sn in pers.iter(f'{ns}surname'):
-                if sn.text:
-                    surname = sn.text
-            parts = forenames + ([surname] if surname else [])
-            if parts:
-                ref["authors"].append(" ".join(parts))
+        # Extract authors only (not editors)
+        for author in bib.iter(f'{ns}author'):
+            for pers in author.iter(f'{ns}persName'):
+                forenames = [fn.text for fn in pers.iter(f'{ns}forename') if fn.text]
+                surname = ""
+                for sn in pers.iter(f'{ns}surname'):
+                    if sn.text:
+                        surname = sn.text
+                parts = forenames + ([surname] if surname else [])
+                if parts:
+                    ref["authors"].append(" ".join(parts))
         analytic = bib.find(f'{ns}analytic')
         monogr = bib.find(f'{ns}monogr')
         if analytic is not None:
